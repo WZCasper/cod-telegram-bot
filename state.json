@@ -1,5 +1,9 @@
 {
-  "last_ids": {},
+  "last_ids": {
+    "twitter_main": "https://nitter.net/CODLeague/status/2055011890875560243#m",
+    "twitter_cm": "https://nitter.net/CallofDutyCM/status/2052046361999323137#m",
+    "twitter_updates": "https://nitter.net/CODUpdates/status/2054975631432237462#m"
+  },
   "paused": false,
   "min_interval_minutes": 15,
   "translate": true,
