@@ -21,12 +21,11 @@ def add_category_emoji(text):
 
 def build_message(post, translate=False):
     if translate:
-        # Переводим только текст, ссылку не трогаем
         from utils.translator import translate_to_russian
         ru_text = translate_to_russian(post["text"])
     else:
         ru_text = post["text"]
 
     text_with_emoji = add_category_emoji(ru_text)
-    message = f"{text_with_emoji}\n\n🔗 {post['link']}"
-    return message
+    # Ссылку на источник НЕ добавляем
+    return text_with_emoji
