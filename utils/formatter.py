@@ -21,12 +21,10 @@ def add_category_emoji(text):
     return f"📰 {text}"
 
 def normalize_link(url):
-    """Преобразует ссылки nitter.net в исходные x.com, остальные оставляет как есть."""
+    """Преобразует ссылки nitter.net в x.com (на случай, если парсер не справился)"""
     if not url:
         return url
-    # Заменяем домен nitter.net на x.com
     normalized = re.sub(r'https?://nitter\.net/', 'https://x.com/', url)
-    # Убираем якорь #m, если он есть (обычно добавляется Nitter)
     normalized = re.sub(r'#m$', '', normalized)
     return normalized
 
@@ -39,7 +37,7 @@ def build_message(post, translate=False):
 
     text_with_emoji = add_category_emoji(ru_text)
 
-    # Добавляем ссылку на оригинал, предварительно нормализовав её
+    # Добавляем ссылку на оригинал (уже должна быть x.com, но на всякий случай нормализуем)
     link = post.get("link")
     if link:
         clean_link = normalize_link(link)
