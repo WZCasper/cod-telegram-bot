@@ -1,8 +1,7 @@
-import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 import os
 import asyncio
 import sys
+import logging
 from datetime import datetime, timedelta
 
 from state_manager import load_state, save_state
@@ -12,11 +11,13 @@ from sources.blog import fetch_new_blog_posts
 from publisher import publish_post
 from commands import process_commands
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 
 if not BOT_TOKEN or not CHAT_ID:
-    print("Установите переменные окружения BOT_TOKEN и CHAT_ID")
+    logging.error("Установите переменные окружения BOT_TOKEN и CHAT_ID")
     sys.exit(1)
 
 async def main():
@@ -26,7 +27,7 @@ async def main():
     await process_commands(BOT_TOKEN, state)
 
     if state.get("paused"):
-        print("Бот на паузе, выход.")
+        logging.info("Бот на паузе, выход.")
         return
 
     # Загружаем новости из всех источников
@@ -39,7 +40,7 @@ async def main():
         new_posts.extend(tweets)
         new_ids.update(updated_ids)
     except Exception as e:
-        print(f"Ошибка Twitter: {e}")
+        logging.error(f"Ошибка Twitter: {e}")
 
     # YouTube
     try:
@@ -47,7 +48,7 @@ async def main():
         new_posts.extend(videos)
         new_ids.update(updated_ids)
     except Exception as e:
-        print(f"Ошибка YouTube: {e}")
+        logging.error(f"Ошибка YouTube: {e}")
 
     # Блог
     try:
@@ -55,25 +56,17 @@ async def main():
         new_posts.extend(blogs)
         new_ids.update(updated_ids)
     except Exception as e:
-        print(f"Ошибка блога: {e}")
+        logging.error(f"Ошибка блога: {e}")
 
     if not new_posts:
-        print("Нет новых постов.")
-        # обновим last_ids на случай если RSS-читалки сбились, но не будем коммитить если не меняли
+        logging.info("Нет новых постов.")
         state["last_ids"] = new_ids
         save_state(state)
         return
 
-    # Антиспам: минимальный интервал (проверяем по времени последнего запуска - не идеально, но ок)
-    # В простом варианте просто публикуем все, не чаще одного раза в минуту
-    # Но так как Actions запускается раз в 15 мин, можно не проверять
-
-    # Сортируем по времени? У нас нет точного времени публикации в исходных данных,
-    # поэтому просто публикуем как есть.
-
-    # Публикация постов
+    # Публикация постов с задержкой
     translate = state.get("translate", True)
-    post_delay = 4  # секунд между постами (можно увеличить)
+    post_delay = 5  # секунд между постами
     for idx, post in enumerate(new_posts):
         success = await publish_post(BOT_TOKEN, CHAT_ID, post, translate, state)
         if idx < len(new_posts) - 1:
@@ -82,17 +75,14 @@ async def main():
 
     # Обновляем состояние
     state["last_ids"] = new_ids
-    # Отправляем краткий отчёт администратору (в канал) - опционально
-    await publish_report(BOT_TOKEN, CHAT_ID, len(new_posts))
-
     save_state(state)
 
-async def publish_report(bot_token, chat_id, count):
-    from telegram import Bot
-    bot = Bot(token=bot_token)
+    # Краткий отчёт (опционально)
     try:
-        await bot.send_message(chat_id=chat_id, text=f"📊 Опубликовано новых постов: {count}")
-    except:
+        from telegram import Bot
+        bot = Bot(token=BOT_TOKEN)
+        await bot.send_message(chat_id=CHAT_ID, text=f"📊 Опубликовано новых постов: {len(new_posts)}")
+    except Exception:
         pass
 
 if __name__ == "__main__":
