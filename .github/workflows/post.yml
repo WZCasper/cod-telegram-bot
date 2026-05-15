@@ -1,0 +1,37 @@
+name: Post CoD News
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # каждые 15 минут
+  workflow_dispatch:        # ручной запуск из Actions
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true  # чтобы сделать коммит обратно
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python main.py
+
+      - name: Commit and push state changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add state.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update state [skip ci]"
+          git push
