@@ -65,21 +65,30 @@ async def main():
         save_state(state)
         return
 
-    # Публикация постов с БОЛЬШОЙ задержкой
+    # Отфильтруем посты без внятного текста (пустые или шаблонные заголовки)
+    filtered_posts = []
+    for post in new_posts:
+        text = post.get("text", "").strip()
+        if text and text.lower() not in ["новость", ""]:
+            filtered_posts.append(post)
+        else:
+            logging.warning(f"Пропущен пост с пустым или шаблонным заголовком: {post.get('link')}")
+
+    # Публикация отфильтрованных постов с БОЛЬШОЙ задержкой
     translate = state.get("translate", True)
     post_delay = 30  # секунд между постами
-    for idx, post in enumerate(new_posts):
+    for idx, post in enumerate(filtered_posts):
         success = await publish_post(BOT_TOKEN, CHAT_ID, post, translate, state)
         if not success:
             logging.warning(f"Пост не был отправлен, пропускаю: {post.get('text', '')[:50]}...")
 
         # Делаем паузу 30 секунд + случайная добавка (0-5 сек.) между ВСЕМИ постами
-        if idx < len(new_posts) - 1:
+        if idx < len(filtered_posts) - 1:
             delay = post_delay + random.uniform(0, 5)
             logging.info(f"Жду {delay:.1f} сек. перед следующим постом")
             await asyncio.sleep(delay)
 
-    # Обновляем состояние
+    # Обновляем состояние (last_ids) по всем новым постам, чтобы не было повторов
     state["last_ids"] = new_ids
     save_state(state)
 
@@ -87,7 +96,7 @@ async def main():
     try:
         from telegram import Bot
         bot = Bot(token=BOT_TOKEN)
-        await bot.send_message(chat_id=CHAT_ID, text=f"📊 Опубликовано новых постов: {len(new_posts)}")
+        await bot.send_message(chat_id=CHAT_ID, text=f"📊 Опубликовано новых постов: {len(filtered_posts)}")
     except Exception:
         pass
 
