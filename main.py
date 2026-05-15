@@ -25,7 +25,7 @@ async def main():
     state = load_state()
 
     # Обрабатываем команды администратора
-    await process_commands(BOT_TOKEN, state)
+    # await process_commands(BOT_TOKEN, state)
 
     if state.get("paused"):
         logging.info("Бот на паузе, выход.")
