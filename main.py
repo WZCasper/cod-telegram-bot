@@ -51,7 +51,7 @@ async def main():
     except Exception as e:
         logging.error(f"Ошибка YouTube: {e}")
 
-    # Блог
+    # Блог (временно можно отключить, закомментировав следующие строки)
     try:
         blogs, updated_ids = fetch_new_blog_posts(state)
         new_posts.extend(blogs)
@@ -59,13 +59,7 @@ async def main():
     except Exception as e:
         logging.error(f"Ошибка блога: {e}")
 
-    if not new_posts:
-        logging.info("Нет новых постов.")
-        state["last_ids"] = new_ids
-        save_state(state)
-        return
-
-    # Отфильтруем посты без внятного текста (пустые или шаблонные заголовки)
+    # Фильтрация: убираем посты с пустым текстом или заголовком-заглушкой
     filtered_posts = []
     for post in new_posts:
         text = post.get("text", "").strip()
@@ -74,7 +68,13 @@ async def main():
         else:
             logging.warning(f"Пропущен пост с пустым или шаблонным заголовком: {post.get('link')}")
 
-    # Публикация отфильтрованных постов с БОЛЬШОЙ задержкой
+    if not filtered_posts:
+        logging.info("После фильтрации не осталось постов для публикации.")
+        state["last_ids"] = new_ids
+        save_state(state)
+        return
+
+    # Публикация отфильтрованных постов с большой задержкой
     translate = state.get("translate", True)
     post_delay = 30  # секунд между постами
     for idx, post in enumerate(filtered_posts):
@@ -82,17 +82,16 @@ async def main():
         if not success:
             logging.warning(f"Пост не был отправлен, пропускаю: {post.get('text', '')[:50]}...")
 
-        # Делаем паузу 30 секунд + случайная добавка (0-5 сек.) между ВСЕМИ постами
         if idx < len(filtered_posts) - 1:
             delay = post_delay + random.uniform(0, 5)
             logging.info(f"Жду {delay:.1f} сек. перед следующим постом")
             await asyncio.sleep(delay)
 
-    # Обновляем состояние (last_ids) по всем новым постам, чтобы не было повторов
+    # Обновляем состояние
     state["last_ids"] = new_ids
     save_state(state)
 
-    # Краткий отчёт (опционально)
+    # Краткий отчёт
     try:
         from telegram import Bot
         bot = Bot(token=BOT_TOKEN)
