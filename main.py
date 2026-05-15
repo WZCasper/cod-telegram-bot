@@ -13,8 +13,8 @@ from publisher import publish_post
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-CHAT_ID = os.environ.get("CHAT_ID")
+BOT_TOKEN = os.environ.get("7888440959:AAGN7gM-ZK05uK7RKzyi4xohp0WOBG-tHlY")
+CHAT_ID = os.environ.get("1002206645088")
 
 if not BOT_TOKEN or not CHAT_ID:
     logger.error("BOT_TOKEN или CHAT_ID не заданы. Проверьте Secrets в репозитории.")
