@@ -1,5 +1,4 @@
 import asyncio
-import random
 import logging
 import requests
 from io import BytesIO
@@ -14,23 +13,19 @@ async def publish_post(bot_token, chat_id, post, translate, state):
     bot = Bot(token=bot_token)
     image_url = post.get("image")
 
-    logging.info(f"Пост из {post.get('source')}: image={image_url}, text={text[:50]}...")
+    logging.info(f"Пост из {post.get('source')}: image={image_url}, text={text[:60]}...")
 
-    # Проверяем, что URL картинки валидный (начинается с http)
+    # Проверяем валидность URL картинки
     valid_image = image_url and isinstance(image_url, str) and image_url.startswith("http")
-    
-    # Если есть валидная картинка, пытаемся отправить её с повторами
+
+    # Если есть картинка, пробуем отправить с ней до 5 раз
     if valid_image:
         for attempt in range(5):
             try:
-                # --- ГЛАВНОЕ ИЗМЕНЕНИЕ: Скачиваем картинку сами, а не отдаём URL ---
-                logging.info(f"Попытка {attempt+1}/5 скачать изображение: {image_url}")
+                logging.info(f"Скачиваю изображение: {image_url}")
                 response = requests.get(image_url, timeout=15)
-                response.raise_for_status() # Проверим, что не 404 и не 500
-                
-                # Отправляем фото как файл из памяти
+                response.raise_for_status()
                 photo_file = InputFile(BytesIO(response.content), filename="image.jpg")
-                logging.info("Изображение скачано. Отправляю в Telegram...")
                 await bot.send_photo(
                     chat_id=chat_id,
                     photo=photo_file,
@@ -39,28 +34,42 @@ async def publish_post(bot_token, chat_id, post, translate, state):
                 )
                 logging.info("Фото успешно отправлено!")
                 return True
-
             except RetryAfter as e:
-                wait = e.retry_after + random.uniform(5, 10)
-                logging.warning(f"Flood control. Жду {wait:.1f} сек.")
+                wait = e.retry_after + 2
+                logging.warning(f"Flood control, жду {wait} сек.")
                 await asyncio.sleep(wait)
             except requests.exceptions.RequestException as e:
-                logging.error(f"Не удалось скачать изображение: {e}")
-                break # Нет смысла повторять, если URL не работает
+                logging.error(f"Ошибка загрузки изображения: {e}")
+                break  # битая ссылка – не пытаемся снова
             except TelegramError as e:
                 error_str = str(e)
                 logging.error(f"Ошибка Telegram: {error_str}")
-                if "flood" in error_str.lower():
-                    await asyncio.sleep(60 + random.uniform(1, 5)) # Увеличенная пауза при флуде
+                if "url host is empty" in error_str.lower():
+                    break
+                elif "flood" in error_str.lower():
+                    await asyncio.sleep(15)
                 else:
-                    break # Другая ошибка, пробовать не будем
+                    break
             except Exception as e:
-                logging.error(f"Неизвестная ошибка при отправке фото: {e}")
+                logging.error(f"Неизвестная ошибка: {e}")
                 break
-    
-    # Если картинки нет, отправляем только текст
-    elif not valid_image:
-        logging.info("Отправка текстового сообщения (изображение отсутствует)")
+
+        # Если фото не отправилось, пробуем отправить только текст
+        logging.info("Не удалось отправить фото, пробую отправить только текст")
+        try:
+            await bot.send_message(
+                chat_id=chat_id,
+                text=text,
+                disable_web_page_preview=True,
+                parse_mode="HTML"
+            )
+            return True
+        except Exception as e:
+            logging.error(f"Не удалось отправить даже текст: {e}")
+            return False
+
+    # Если картинки нет – отправляем текст
+    else:
         try:
             await bot.send_message(
                 chat_id=chat_id,
@@ -70,8 +79,5 @@ async def publish_post(bot_token, chat_id, post, translate, state):
             )
             return True
         except TelegramError as e:
-            logging.error(f"Не удалось отправить текст: {e}")
+            logging.error(f"Ошибка отправки текста: {e}")
             return False
-    else:
-        logging.warning("Пост не был отправлен из-за проблем с изображением.")
-        return False
