@@ -1,0 +1,9 @@
+{
+  "last_ids": {},
+  "paused": false,
+  "min_interval_minutes": 15,
+  "translate": true,
+  "category_emojis": true,
+  "anti_spam": true,
+  "admin_ids": []
+}
