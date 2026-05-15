@@ -1,4 +1,5 @@
 import re
+from utils.translator import translate_text_safe
 
 CATEGORIES = {
     "double_xp": "🔥",
@@ -20,12 +21,13 @@ def add_category_emoji(text):
     return f"📰 {text}"
 
 def build_message(post, translate=False):
+    original_text = post["text"]
     if translate:
-        from utils.translator import translate_to_russian
-        ru_text = translate_to_russian(post["text"])
+        # Используем безопасный перевод
+        ru_text = translate_text_safe(original_text)
     else:
-        ru_text = post["text"]
+        ru_text = original_text
 
     text_with_emoji = add_category_emoji(ru_text)
-    # Ссылку на источник НЕ добавляем
+    # Никаких ссылок не добавляем
     return text_with_emoji
