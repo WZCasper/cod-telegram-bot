@@ -1,7 +1,6 @@
 import feedparser
-from datetime import datetime, timezone
 
-CHANNEL_ID = "UCe3VxQ8G85w03MYlE4zWv0A"  # Call of Duty
+CHANNEL_ID = "UCe3VxQ8G85w03MYlE4zWv0A"
 RSS_URL = f"https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}"
 
 def fetch_new_videos(state):
@@ -28,6 +27,8 @@ def fetch_new_videos(state):
 def format_video_entry(entry):
     video_id = entry.yt_videoid
     image_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+    if image_url and not image_url.startswith("http"):
+        image_url = None
     return {
         "text": entry.title,
         "link": entry.link,
