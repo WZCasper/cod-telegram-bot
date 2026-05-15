@@ -5,14 +5,15 @@ STATE_FILE = "state.json"
 
 def load_state():
     if not os.path.exists(STATE_FILE):
+        print(f"{STATE_FILE} не найден, создаю новый...")
         return {
-            "last_ids": {},     # по источникам: {"blog": "...", "twitter_main": "...", ...}
+            "last_ids": {},
             "paused": False,
             "min_interval_minutes": 15,
             "translate": True,
             "category_emojis": True,
             "anti_spam": True,
-            "admin_ids": []     # пока не используется, но можно добавить
+            "admin_ids": []
         }
     with open(STATE_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
