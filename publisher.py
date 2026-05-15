@@ -11,7 +11,7 @@ async def publish_post(bot_token, chat_id, post, translate, state):
     bot = Bot(token=bot_token)
     image_url = post.get("image")
 
-    # Проверяем, что URL картинки валидный (начинается с http)
+    # Проверяем, что URL картинки валидный
     send_photo = False
     if image_url and isinstance(image_url, str) and image_url.startswith("http"):
         send_photo = True
@@ -31,7 +31,7 @@ async def publish_post(bot_token, chat_id, post, translate, state):
                     parse_mode="HTML"
                 )
             else:
-                logging.info(f"Отправка текста (картинка отсутствует или невалидна)")
+                logging.info("Отправка текста (изображение отсутствует или невалидно)")
                 await bot.send_message(
                     chat_id=chat_id,
                     text=text,
@@ -47,17 +47,18 @@ async def publish_post(bot_token, chat_id, post, translate, state):
             error_str = str(e)
             logging.error(f"Ошибка отправки: {error_str}")
             if "url host is empty" in error_str.lower() or "invalid file" in error_str.lower():
-                # Картинка точно не пройдёт, пробуем без неё
+                # Картинка не прошла, пробуем без неё
                 send_photo = False
                 await asyncio.sleep(0.5)
             elif "flood" in error_str.lower():
-                await asyncio.sleep(15)  # на всякий случай
+                await asyncio.sleep(15)
             else:
-                break  # другая ошибка, пробовать не будем
+                break
         except Exception as e:
             logging.error(f"Неизвестная ошибка: {e}")
             break
-    # Если все попытки провалились, пробуем отправить чистый текст без картинки
+
+    # Если с фото не получилось, отправляем только текст
     if send_photo:
         logging.info("Повторная попытка отправки без фото")
         try:
