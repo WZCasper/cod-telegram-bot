@@ -18,5 +18,9 @@ def load_state():
         return json.load(f)
 
 def save_state(state):
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2, ensure_ascii=False)
+    try:
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2, ensure_ascii=False)
+        print(f"Состояние успешно сохранено в {STATE_FILE}")
+    except Exception as e:
+        print(f"ОШИБКА сохранения state.json: {e}")
