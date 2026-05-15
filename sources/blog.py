@@ -1,6 +1,5 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime, timezone
 
 BLOG_URL = "https://www.callofduty.com/blog"
 
@@ -14,10 +13,8 @@ def fetch_new_blog_posts(state):
         return [], state.get("last_ids", {})
 
     soup = BeautifulSoup(resp.text, "html.parser")
-    # Селектор для статей (надо проверять в браузере, сейчас предположим .blog-card)
     articles = soup.select("a.blog-card")
     if not articles:
-        # запасной вариант – ищем любые ссылки на статьи
         articles = soup.select("a[href*='/blog/']")
 
     last_ids = state.get("last_ids", {})
@@ -32,14 +29,14 @@ def fetch_new_blog_posts(state):
             url = "https://www.callofduty.com" + url
         if url == last_url:
             break
-        # ищем заголовок
         title_tag = article.select_one("h3, .title, .blog-title")
         title = title_tag.get_text(strip=True) if title_tag else "Новость"
-        # ищем картинку
         img_tag = article.select_one("img")
         image = img_tag["src"] if img_tag else None
         if image and image.startswith("//"):
             image = "https:" + image
+        if image and not image.startswith("http"):
+            image = None
         new_posts.append({
             "text": title,
             "link": url,
