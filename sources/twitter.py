@@ -48,47 +48,31 @@ def fetch_new_tweets(state):
 
     return new_posts, last_ids
 
-def clean_nitter_links(text):
-    """Заменяет все ссылки nitter.net в тексте на оригинальные x.com"""
-    # заменяем https://nitter.net/любой_путь на https://x.com/тот_же_путь
-    text = re.sub(r'https?://nitter\.net/', 'https://x.com/', text)
-    # убираем #m в конце ссылок
-    text = re.sub(r'#m\b', '', text)
-    return text
-
 def format_tweet_entry(entry, source_key):
     soup = BeautifulSoup(entry.summary, "html.parser")
-    # Заменяем <br> и <p> на переносы строк, чтобы сохранить форматирование
-    for tag in soup.find_all(["br", "p"]):
-        tag.replace_with("\n")
-    # Получаем текст, теперь с сохранением переносов
+
+    # Сохраняем переносы строк: заменяем <br> и <p> на \n
+    for tag in soup.find_all(["br", "p", "div"]):
+        tag.insert_after("\n")
     text = soup.get_text()
-    # Убираем лишние пробелы и пустые строки, но сохраняем абзацы
+    # Чистим двойные переносы и убираем пустые строки без потери структуры
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     text = "\n".join(lines)
 
-    # Заменяем nitter-ссылки внутри текста на x.com
-    text = clean_nitter_links(text)
-
-    # Извлекаем картинку, если есть
+    # Картинка
     image_url = None
     img_tag = soup.find("img")
     if img_tag and img_tag.get("src"):
         image_url = img_tag["src"]
         if image_url.startswith("//"):
             image_url = "https:" + image_url
-        # Проверяем, что это настоящая картинка, а не аватар/пиксель
         if not image_url.startswith("http"):
             image_url = None
 
-    # Нормализуем ссылку на сам твит (для ОРИГИНАЛ)
-    link = entry.link
-    link = re.sub(r'https?://nitter\.net/', 'https://x.com/', link)
-    link = re.sub(r'#m$', '', link)
-
+    # Ссылку на сам твит нормализуем позже в formatter.py, здесь оставляем как есть
     return {
         "text": text,
-        "link": link,
+        "link": entry.link,   # будет исправлен на x.com в build_message
         "image": image_url,
         "source": source_key
     }
