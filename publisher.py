@@ -1,4 +1,5 @@
 import asyncio
+import random
 import logging
 from telegram import Bot
 from telegram.error import TelegramError, RetryAfter
@@ -13,62 +14,51 @@ async def publish_post(bot_token, chat_id, post, translate, state):
 
     logging.info(f"Пост из {post.get('source')}: image={image_url}, text={text[:50]}...")
 
-    # Проверяем, что URL картинки валидный
-    send_photo = False
-    if image_url and isinstance(image_url, str) and image_url.startswith("http"):
-        send_photo = True
-    else:
-        if image_url:
-            logging.warning(f"Пропущена невалидная ссылка на изображение: {image_url}")
-
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            if send_photo:
-                logging.info(f"Отправка фото: {image_url}")
+    # Проверяем, что URL картинки валидный (начинается с http)
+    valid_image = image_url and isinstance(image_url, str) and image_url.startswith("http")
+    
+    # Если есть валидная картинка, пытаемся отправить её до 5 раз
+    if valid_image:
+        for attempt in range(5):
+            try:
+                logging.info(f"Попытка {attempt+1}/5 отправить фото: {image_url}")
                 await bot.send_photo(
                     chat_id=chat_id,
                     photo=image_url,
                     caption=text,
                     parse_mode="HTML"
                 )
-            else:
-                logging.info("Отправка текста (изображение отсутствует или невалидно)")
-                await bot.send_message(
-                    chat_id=chat_id,
-                    text=text,
-                    disable_web_page_preview=True,
-                    parse_mode="HTML"
-                )
-            return True
-        except RetryAfter as e:
-            wait = e.retry_after + 1
-            logging.warning(f"Flood control: жду {wait} сек.")
-            await asyncio.sleep(wait)
-        except TelegramError as e:
-            error_str = str(e)
-            logging.error(f"Ошибка отправки: {error_str}")
-            if "url host is empty" in error_str.lower() or "invalid file" in error_str.lower():
-                send_photo = False
-                await asyncio.sleep(0.5)
-            elif "flood" in error_str.lower():
-                await asyncio.sleep(15)
-            else:
+                logging.info(f"Фото успешно отправлено!")
+                return True
+            except RetryAfter as e:
+                wait = e.retry_after + random.uniform(1, 5)
+                logging.warning(f"Flood control. Жду {wait:.1f} сек.")
+                await asyncio.sleep(wait)
+            except TelegramError as e:
+                error_str = str(e)
+                logging.error(f"Ошибка отправки фото: {error_str}")
+                if "url host is empty" in error_str.lower() or "invalid file" in error_str.lower():
+                    # Картинка битая, не будем пытаться отправить текст
+                    logging.warning("Битая ссылка на изображение, отменяем пост.")
+                    return False
+                elif "flood" in error_str.lower():
+                    await asyncio.sleep(15 + random.uniform(1, 5))
+                else:
+                    break
+            except Exception as e:
+                logging.error(f"Неизвестная ошибка при отправке фото: {e}")
                 break
-        except Exception as e:
-            logging.error(f"Неизвестная ошибка: {e}")
-            break
-
-    if send_photo:
-        logging.info("Повторная попытка отправки без фото")
-        try:
-            await bot.send_message(
-                chat_id=chat_id,
-                text=text,
-                disable_web_page_preview=True,
-                parse_mode="HTML"
-            )
-            return True
-        except Exception as e:
-            logging.error(f"Не удалось отправить даже текст: {e}")
-    return False
+    
+    # Если картинки нет, отправляем только текст
+    logging.info("Отправка текстового сообщения (изображение отсутствует)")
+    try:
+        await bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            disable_web_page_preview=True,
+            parse_mode="HTML"
+        )
+        return True
+    except TelegramError as e:
+        logging.error(f"Не удалось отправить даже текст: {e}")
+        return False
