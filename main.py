@@ -66,7 +66,7 @@ async def main():
 
     # Публикация постов с задержкой
     translate = state.get("translate", True)
-    post_delay = 5  # секунд между постами
+    post_delay = 10  # секунд между постами
     for idx, post in enumerate(new_posts):
         success = await publish_post(BOT_TOKEN, CHAT_ID, post, translate, state)
         if idx < len(new_posts) - 1:
