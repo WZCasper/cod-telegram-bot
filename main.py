@@ -67,14 +67,15 @@ async def main():
 
     # Публикация постов с БОЛЬШОЙ задержкой
     translate = state.get("translate", True)
+    post_delay = 30  # секунд между постами
     for idx, post in enumerate(new_posts):
         success = await publish_post(BOT_TOKEN, CHAT_ID, post, translate, state)
         if not success:
             logging.warning(f"Пост не был отправлен, пропускаю: {post.get('text', '')[:50]}...")
-        
+
         # Делаем паузу 30 секунд + случайная добавка (0-5 сек.) между ВСЕМИ постами
         if idx < len(new_posts) - 1:
-            delay = 30 + random.uniform(0, 5)
+            delay = post_delay + random.uniform(0, 5)
             logging.info(f"Жду {delay:.1f} сек. перед следующим постом")
             await asyncio.sleep(delay)
 
