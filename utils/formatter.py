@@ -26,5 +26,12 @@ def build_message(post, translate=False):
         ru_text = translate_text_safe(original_text)
     else:
         ru_text = original_text
+
     text_with_emoji = add_category_emoji(ru_text)
+
+    # Добавляем ссылку на оригинал в конце
+    link = post.get("link")
+    if link:
+        text_with_emoji += f'\n\n<a href="{link}">ОРИГИНАЛ</a>'
+
     return text_with_emoji
