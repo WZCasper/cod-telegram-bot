@@ -1,6 +1,7 @@
 import os
 import asyncio
 import sys
+import random
 import logging
 from datetime import datetime, timedelta
 
@@ -64,14 +65,18 @@ async def main():
         save_state(state)
         return
 
-    # Публикация постов с задержкой
+    # Публикация постов с БОЛЬШОЙ задержкой
     translate = state.get("translate", True)
-    post_delay = 10  # секунд между постами
     for idx, post in enumerate(new_posts):
         success = await publish_post(BOT_TOKEN, CHAT_ID, post, translate, state)
+        if not success:
+            logging.warning(f"Пост не был отправлен, пропускаю: {post.get('text', '')[:50]}...")
+        
+        # Делаем паузу 30 секунд + случайная добавка (0-5 сек.) между ВСЕМИ постами
         if idx < len(new_posts) - 1:
-            logging.info(f"Жду {post_delay} сек. перед следующим постом")
-            await asyncio.sleep(post_delay)
+            delay = 30 + random.uniform(0, 5)
+            logging.info(f"Жду {delay:.1f} сек. перед следующим постом")
+            await asyncio.sleep(delay)
 
     # Обновляем состояние
     state["last_ids"] = new_ids
