@@ -1,3 +1,5 @@
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 import os
 import asyncio
 import sys
@@ -71,11 +73,12 @@ async def main():
 
     # Публикация постов
     translate = state.get("translate", True)
-    for post in new_posts:
+    post_delay = 4  # секунд между постами (можно увеличить)
+    for idx, post in enumerate(new_posts):
         success = await publish_post(BOT_TOKEN, CHAT_ID, post, translate, state)
-        if success:
-            # ждём немного между сообщениями, чтобы не упереться в лимиты Telegram
-            await asyncio.sleep(1)
+        if idx < len(new_posts) - 1:
+            logging.info(f"Жду {post_delay} сек. перед следующим постом")
+            await asyncio.sleep(post_delay)
 
     # Обновляем состояние
     state["last_ids"] = new_ids
